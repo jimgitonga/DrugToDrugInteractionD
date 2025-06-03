@@ -5,3 +5,4 @@ torch>=2.0.0
 scikit-learn>=1.1.0
 requests>=2.28.0
 rdkit==2024.9.5
+torch-geometric==2.6.1
