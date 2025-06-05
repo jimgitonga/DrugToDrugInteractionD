@@ -85,7 +85,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -106,7 +106,7 @@ def load_model():
     try:
         predictor = DDIPredictor()
         
-        # Get latest model timestamp
+
         model_dir = "models"
         if os.path.exists(model_dir):
             model_files = [f for f in os.listdir(model_dir) if f.startswith("ddi_model_")]
@@ -230,7 +230,7 @@ def display_prediction_result(result: Dict, drug1: str, drug2: str):
             delta=None
         )
     
-    # Drug details
+
     with st.expander("🔍 Detailed Drug Information", expanded=False):
         col1, col2 = st.columns(2)
         
@@ -246,7 +246,7 @@ def display_prediction_result(result: Dict, drug1: str, drug2: str):
             if 'drug2_formula' in result:
                 st.write(f"**Formula:** {result['drug2_formula']}")
     
-    # Clinical recommendations
+
     with st.expander("📋 Clinical Recommendations", expanded=True):
         if result.get('interaction_predicted', False):
             st.warning("""
@@ -269,7 +269,7 @@ def batch_prediction_interface():
     """Interface for batch predictions"""
     st.markdown("### 📊 Batch Prediction")
     
-    # File upload
+ 
     uploaded_file = st.file_uploader(
         "Upload CSV file with drug pairs",
         type=['csv'],
@@ -299,12 +299,12 @@ def batch_prediction_interface():
                         })
                         progress_bar.progress((idx + 1) / len(df))
                     
-                    # Display results
+             
                     results_df = pd.DataFrame(results)
                     st.write("**Batch Prediction Results:**")
                     st.dataframe(results_df)
                     
-                    # Summary statistics
+  
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("Total Pairs", len(results_df))
@@ -315,7 +315,7 @@ def batch_prediction_interface():
                         avg_prob = results_df['probability'].mean()
                         st.metric("Avg Probability", f"{avg_prob:.2f}")
                     
-                    # Download results
+
                     csv = results_df.to_csv(index=False)
                     st.download_button(
                         "📥 Download Results",
@@ -330,7 +330,7 @@ def batch_prediction_interface():
             st.error(f"Error processing file: {str(e)}")
 
 def main():
-    # Header
+
     st.markdown("""
     <div class="main-header">
         <h1>💊 Drug Interaction Predictor</h1>
@@ -338,7 +338,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Load model
+
     if not st.session_state.model_loaded:
         with st.spinner("🔄 Loading AI model..."):
             predictor, timestamp = load_model()
@@ -350,14 +350,14 @@ def main():
                 st.error("❌ Failed to load model. Please check your model files.")
                 st.stop()
     
-    # Sidebar
+
     with st.sidebar:
         st.markdown("### 🎛️ Control Panel")
         
-        # Model info
+
         st.info("**Model Status:** ✅ Loaded")
         
-        # Cache status
+
         cache_size = len(st.session_state.prediction_cache)
         st.metric("Cache Size", cache_size)
         
@@ -365,12 +365,12 @@ def main():
             st.session_state.prediction_cache.clear()
             st.success("Cache cleared!")
         
-        # Settings
+ 
         st.markdown("### ⚙️ Settings")
         show_details = st.checkbox("Show detailed results", value=True)
         auto_predict = st.checkbox("Auto-predict on input", value=False)
         
-        # Help
+
         with st.expander("❓ Help & Info"):
             st.markdown("""
             **How to use:**
@@ -385,7 +385,7 @@ def main():
             - Detailed drug information
             """)
     
-    # Main interface tabs
+
     tab1, tab2, tab3 = st.tabs(["🔍 Single Prediction", "📊 Batch Prediction", "📈 Analytics"])
     
     with tab1:
@@ -407,7 +407,7 @@ def main():
                 help="Enter drug name or ChEMBL ID"
             )
         
-        # Prediction button and auto-predict
+
         predict_button = st.button("🔬 Predict Interaction", type="primary", use_container_width=True)
         
         if (predict_button or (auto_predict and drug1 and drug2)) and drug1 and drug2:
@@ -425,7 +425,7 @@ def main():
         st.markdown("### 📈 Prediction Analytics")
         
         if st.session_state.prediction_cache:
-            # Convert cache to DataFrame for analysis
+
             cache_data = []
             for key, result in st.session_state.prediction_cache.items():
                 drugs = key.split('_')

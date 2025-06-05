@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Suppress RDKit warnings
+
 RDLogger.DisableLog('rdApp.*')
 
 class DrugDataCollector:
@@ -90,13 +90,13 @@ class DrugDataCollector:
         """Get drug interactions using structural similarity"""
         def download_interactions():
             interactions = []
-            mol_dict = {}  # Cache for molecules
+            mol_dict = {} 
             
-            # Calculate structural similarity based interactions
+
             for i, drug1 in enumerate(drug_ids):
                 for drug2 in drug_ids[i+1:]:
                     try:
-                        # Get drug structures
+
                         if drug1 not in mol_dict:
                             drug1_data = self.get_drugs()[self.get_drugs()['drug_id'] == drug1].iloc[0]
                             mol1 = Chem.MolFromSmiles(drug1_data['smiles'])
@@ -111,12 +111,12 @@ class DrugDataCollector:
                         else:
                             mol2 = mol_dict[drug2]
                         
-                        # Calculate structural similarity
+
                         fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1, 2)
                         fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2, 2)
                         similarity = DataStructs.TanimotoSimilarity(fp1, fp2)
                         
-                        # Create realistic interaction based on similarity
+
                         interaction = 1 if similarity > 0.5 else 0
                         severity = 'high' if similarity > 0.7 else 'medium' if similarity > 0.5 else 'low'
                         
@@ -141,7 +141,7 @@ class DrugDataCollector:
                         continue
             
             interactions_df = pd.DataFrame(interactions)
-            # Balance the dataset
+  
             pos_samples = interactions_df[interactions_df['interaction'] == 1]
             neg_samples = interactions_df[interactions_df['interaction'] == 0].sample(
                 n=len(pos_samples), random_state=42)
@@ -214,7 +214,7 @@ class DDIModel(torch.nn.Module):
         logger.info(f"- Attention heads: {num_heads}")
         logger.info(f"- Dropout rate: {dropout}")
         
-        # Three GAT layers
+
         self.conv1 = GATv2Conv(
             num_features,
             hidden_dim // num_heads,
@@ -236,12 +236,12 @@ class DDIModel(torch.nn.Module):
             dropout=dropout
         )
         
-        # Layer normalization
+
         self.ln1 = torch.nn.LayerNorm(hidden_dim)
         self.ln2 = torch.nn.LayerNorm(hidden_dim)
         self.ln3 = torch.nn.LayerNorm(hidden_dim)
         
-        # MLP for prediction
+
         self.mlp = torch.nn.Sequential(
             torch.nn.Linear(hidden_dim * 2, hidden_dim),
             torch.nn.LayerNorm(hidden_dim),
@@ -381,8 +381,7 @@ class DDIPredictor:
     ) -> Dict[str, List[float]]:
         logger.info("Starting model training")
         data, drugs_df, interactions_df = self.prepare_data()
-        
-        # Store the data for future use
+  
         self.cached_data = data
         
         logger.info("Splitting data into train/validation sets")
@@ -500,7 +499,7 @@ class DDIPredictor:
                 f"Val AUC: {val_metrics['auc']:.4f}"
             )
         
-        # Generate and cache embeddings for future predictions
+      
         self.model.eval()
         with torch.no_grad():
             self.cached_embeddings = self.model(
@@ -557,10 +556,10 @@ class DDIPredictor:
             raise ValueError("Model not trained or loaded")
         
         try:
-            # Load the drugs data for metadata only if needed
+         
             drugs_df = self.data_collector.get_drugs() if return_details else None
             
-            # Check if drugs exist in the mapping
+       
             if drug1_id not in self.drug_to_idx or drug2_id not in self.drug_to_idx:
                 missing = []
                 if drug1_id not in self.drug_to_idx:
@@ -572,7 +571,7 @@ class DDIPredictor:
             idx1 = self.drug_to_idx[drug1_id]
             idx2 = self.drug_to_idx[drug2_id]
             
-            # Use cached embeddings if available, otherwise generate them
+      
             if self.cached_embeddings is None:
                 logger.info("Generating node embeddings for prediction")
                 
@@ -587,7 +586,7 @@ class DDIPredictor:
                         self.cached_data.edge_index.to(self.device)
                     )
             
-            # Use the cached embeddings
+         
             self.model.eval()
             with torch.no_grad():
                 prob = self.model.predict_pair(
@@ -635,7 +634,7 @@ class DDIPredictor:
                 'idx_to_drug': self.idx_to_drug
             }, f)
         
-        # Save the cached data if it exists
+      
         if hasattr(self, 'cached_data') and self.cached_data is not None:
             data_path = os.path.join(self.model_dir, f"cached_data_{timestamp}.pkl")
             with open(data_path, 'wb') as f:
@@ -658,21 +657,21 @@ class DDIPredictor:
             self.drug_to_idx = mappings['drug_to_idx']
             self.idx_to_drug = mappings['idx_to_drug']
         
-        # Load cached data if available
+    
         if os.path.exists(data_path):
             with open(data_path, 'rb') as f:
                 self.cached_data = pickle.load(f)
             logger.info("Cached data loaded successfully")
         else:
-            # If cached data not available, prepare it
+       
             self.cached_data, _, _ = self.prepare_data()
             logger.info("Cached data not found, prepared new data")
         
-        # Initialize the model
+ 
         self.model = DDIModel(num_features=self.cached_data.x.size(1)).to(self.device)
         self.model.load_state_dict(torch.load(model_path))
         
-        # Generate embeddings once for prediction
+
         self.model.eval()
         with torch.no_grad():
             self.cached_embeddings = self.model(
@@ -723,7 +722,7 @@ def main():
             learning_rate=0.0005
         )
         
-        # Plot and save training history
+
         plot_training_history(history, save_path="training_history.png")
         
         drug_pairs = [

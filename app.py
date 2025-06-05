@@ -12,12 +12,11 @@ from typing import Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor
 from drugData import DDIPredictor
 
-# Initialize Flask application
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-Compress(app)  # Enable compression
+CORS(app)  
+Compress(app)  
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -28,26 +27,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configure rate limiting - using newer Flask-Limiter initialization
+
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["500 per day", "100 per hour"]
 )
 limiter.init_app(app)
 
-# Initialize Redis client for caching
+
 try:
     redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    redis_client.ping()  # Test connection
+    redis_client.ping() 
     USE_REDIS = True
     logger.info("Redis connected successfully, using Redis for caching")
 except (redis.ConnectionError, redis.exceptions.ConnectionError):
     USE_REDIS = False
     logger.warning("Redis connection failed, falling back to in-memory cache")
 
-# Cache settings
-CACHE_EXPIRY = 60 * 60 * 24  # 24 hours in seconds
-PREDICTION_CACHE = {}  # In-memory cache fallback
+
+CACHE_EXPIRY = 60 * 60 * 24  
+PREDICTION_CACHE = {}  
 
 def get_from_cache(key):
     """Get prediction from cache (Redis or in-memory)"""
@@ -74,23 +73,21 @@ def get_latest_model_timestamp():
     if not model_files:
         raise ValueError("No models found in models directory")
     
-    # Get the most recent timestamp
+
     latest_model = max(model_files)
     timestamp = latest_model.replace("ddi_model_", "").replace(".pt", "")
     logger.info(f"Found latest model with timestamp: {timestamp}")
     return timestamp
 
-# Initialize predictor and load the latest model
 predictor = DDIPredictor()
 latest_timestamp = get_latest_model_timestamp()
 predictor.load_model(latest_timestamp)
 logger.info("Model loaded successfully")
 
-# List of common drugs to pre-warm the cache
 COMMON_DRUGS = [
     "CHEMBL25", "CHEMBL2", "CHEMBL3", "CHEMBL4", "CHEMBL5",
     "CHEMBL6", "CHEMBL7", "CHEMBL8", "CHEMBL9", "CHEMBL10"
-]  # Update with your most commonly queried drugs
+]
 
 def warm_prediction_cache():
     """Pre-warm the cache with predictions for common drugs"""
@@ -101,7 +98,7 @@ def warm_prediction_cache():
         for drug2 in COMMON_DRUGS[i+1:]:
             drug_pairs.append((drug1, drug2))
     
-    # Use ThreadPoolExecutor to speed up the pre-warming
+  
     with ThreadPoolExecutor(max_workers=min(10, len(drug_pairs))) as executor:
         executor.map(process_drug_pair, drug_pairs)
     
@@ -113,7 +110,7 @@ def process_drug_pair(pair):
     cache_key = f"{drug1}_{drug2}"
     reverse_key = f"{drug2}_{drug1}"
     
-    # Check cache first
+
     result = get_from_cache(cache_key)
     if result is not None:
         return result
@@ -122,21 +119,21 @@ def process_drug_pair(pair):
     if result is not None:
         return result
     
-    # Not in cache, perform prediction
+
     try:
         result = predictor.predict(drug1, drug2, return_details=True)
         
-        # Cache the result if it's valid
+     
         if isinstance(result, dict) and 'error' not in result:
             set_in_cache(cache_key, result)
-            # Don't need to cache reverse key separately, as we check both directions
+
         
         return result
     except Exception as e:
         logger.error(f"Error predicting for {drug1}-{drug2}: {str(e)}")
         return {"error": str(e)}
 
-# Pre-warm cache with common drug predictions
+
 warm_prediction_cache()
 
 @app.route('/')
@@ -153,7 +150,7 @@ def predict():
         
         logger.info(f"Received prediction request for {drug1} and {drug2}")
         
-        # Process the drug pair
+    
         result = process_drug_pair((drug1, drug2))
         
         response = {
@@ -179,7 +176,7 @@ def batch_predict():
         
         logger.info(f"Received batch prediction request for {len(drug_pairs)} pairs")
         
-        # Use ThreadPoolExecutor for parallel processing
+        
         with ThreadPoolExecutor(max_workers=min(10, len(drug_pairs))) as executor:
             results = list(executor.map(process_drug_pair, drug_pairs))
         
@@ -262,12 +259,12 @@ def ratelimit_handler(e):
     }), 429
 
 if __name__ == '__main__':
-    # Set variables for server
-    HOST = '0.0.0.0'  # Use your computer's local IP when deploying
+   
+    HOST = '0.0.0.0'
     PORT = 5000
     
     if os.environ.get('FLASK_ENV') == 'production':
-        # In production, use a production WSGI server
+      
         try:
             from waitress import serve
             logger.info(f"Starting production server on {HOST}:{PORT}")
@@ -276,6 +273,6 @@ if __name__ == '__main__':
             logger.warning("Waitress not installed, falling back to Flask development server")
             app.run(host=HOST, port=PORT, debug=False, threaded=True)
     else:
-        # For development
+
         logger.info(f"Starting development server on {HOST}:{PORT}")
         app.run(host=HOST, port=PORT, debug=True)
